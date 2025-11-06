@@ -1,8 +1,10 @@
+import 'package:flutter/material.dart';
+
 import 'package:first_app/widgets/expenses_list/expense_crud.dart';
 import 'package:first_app/widgets/expenses_list/expense_list.dart';
 import 'package:first_app/models/data/expenses-list.dart';
 import 'package:first_app/widgets/expenses_list/expense_factory.dart';
-import 'package:flutter/material.dart';
+import 'package:first_app/widgets/chart/chart.dart';
 
 import '../models/expense.dart';
 
@@ -51,7 +53,7 @@ class _ExpensesState extends State<Expenses> {
       ),
       body: Column(
         children: [
-          const Text('List of Expenses'),
+          Chart(expenses: _expenses),
           Expanded(
             child: _expenses.isEmpty
                 ? Center(child: Text('Nothing List'))
