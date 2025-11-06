@@ -1,4 +1,3 @@
-
 import 'package:first_app/models/enum/category.enum.dart';
 import 'package:first_app/widgets/expenses_list/expense_controller.dart';
 import 'package:flutter/material.dart';
@@ -140,6 +139,9 @@ class _ExpenseFactoryState extends State<ExpenseFactory> {
                   onPressed: _submitExpense,
                   child: Text(
                     'Save Expand',
+                    style: TextStyle(
+                      backgroundColor: Colors.white,
+                    ),
                   ),
                 ),
               ],
