@@ -1,7 +1,7 @@
 
-import 'package:first_app/part2/question_screen.dart';
-import 'package:first_app/part2/result_screen.dart';
-import 'package:first_app/part2/start_screen.dart';
+import 'package:first_app/_training_part/part2/question_screen.dart';
+import 'package:first_app/_training_part/part2/result_screen.dart';
+import 'package:first_app/_training_part/part2/start_screen.dart';
 import 'package:flutter/material.dart';
 
 import 'data/questions.dart';
