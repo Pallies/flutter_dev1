@@ -1,5 +1,6 @@
-import 'package:first_app/models/expense.dart';
+
 import '../models/enum/category.enum.dart';
+import '../models/expense.dart';
 
 
 class ExpenseBucket {
