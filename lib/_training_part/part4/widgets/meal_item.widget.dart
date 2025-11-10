@@ -1,19 +1,20 @@
-import 'package:first_app/widgets/meal_item_row.dart';
+
 import 'package:flutter/material.dart';
 import 'package:transparent_image/transparent_image.dart';
 
 import '../models/meal.model.dart';
 import '../screens/meal_detail.screen.dart';
+import 'meal_item_row.dart';
 
 class MealItem extends StatelessWidget {
-  const MealItem({super.key, required this.meal});
+  const MealItem({super.key, required this.meal,required this.onToggleFavorite});
 
   final Meal meal;
-
+final void Function(Meal meal) onToggleFavorite;
   void _mealDetailScreenRouter(BuildContext context, Meal meal) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (ctx) => MealDetailScreen(meal: meal),
+        builder: (ctx) => MealDetailScreen(meal: meal,onToggleFavorite:onToggleFavorite),
       ),
     );
   }
