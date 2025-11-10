@@ -9,7 +9,7 @@ import 'meal.screen.dart';
 class CategoryScreen extends StatelessWidget {
   const CategoryScreen({super.key});
 
-  void _mealScreenRouter(BuildContext context,Category category) {
+  void _mealScreenRouter(BuildContext context, Category category) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (ctx) => MealScreen(
@@ -22,25 +22,21 @@ class CategoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Categories Screen'),
+    // GridView.builder(gridDelegate: gridDelegate, itemBuilder: itemBuilder), liste dynamique avec for in ... ou list
+    return GridView(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 3 / 2,
+        crossAxisSpacing: 20,
+        mainAxisSpacing: 20,
       ),
-      // body: GridView.builder(gridDelegate: gridDelegate, itemBuilder: itemBuilder), liste dynamique avec for in ... ou list
-      body: GridView(
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          childAspectRatio: 3 / 2,
-          crossAxisSpacing: 20,
-          mainAxisSpacing: 20,
+      children: [
+        ...categoriesData.map(
+          (item) =>
+              CategoryItem(category: item, categoryEvent: () => _mealScreenRouter(context, item)),
         ),
-        children: [
-          ...categoriesData.map(
-            (item) => CategoryItem(category: item, categoryEvent: ()=>_mealScreenRouter(context,item)),
-          ),
-          // for (final Category item in categoriesData) CategoryItem(category: item, handleCategoryTap: ()=>_selectCategory(context,item)),
-        ],
-      ),
+        // for (final Category item in categoriesData) CategoryItem(category: item, handleCategoryTap: ()=>_selectCategory(context,item)),
+      ],
     );
   }
 }

@@ -13,6 +13,14 @@ class MealDetailScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(meal.title),
+        actions: [
+          IconButton(
+            onPressed: () {
+
+            },
+            icon: const Icon(Icons.star), //Icon(Icons.star_border),
+          ),
+        ],
       ),
       body: ListView(
         children:    [
