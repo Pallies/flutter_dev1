@@ -13,10 +13,6 @@ class FiltersScreen extends StatefulWidget {
 }
 
 class _FilterScreenState extends State<FiltersScreen> {
-  // late bool _glutenFreeFilterSet = widget.filterOptions[FilterOption.glutenFree]!;
-  // late bool _lactoseFreeFilterSet = widget.filterOptions[FilterOption.lactoseFree]!;
-  // late bool _vegetarianFilterSet = widget.filterOptions[FilterOption.vegetarian]!;
-  // late bool _veganFilterSet = widget.filterOptions[FilterOption.vegan]!;
   bool _glutenFreeFilterSet = false;
   bool _lactoseFreeFilterSet = false;
   bool _vegetarianFilterSet = false;

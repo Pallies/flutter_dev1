@@ -71,15 +71,8 @@ class _TabsScreenState extends State<TabsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final available = mealsData.where((meal) {
-      return _selectedFilters[FilterOption.glutenFree]! && !meal.isGlutenFree ||
-              _selectedFilters[FilterOption.lactoseFree]! && !meal.isLactoseFree ||
-              _selectedFilters[FilterOption.vegetarian]! && !meal.isVegetarian ||
-              _selectedFilters[FilterOption.vegan]! && !meal.isVegan
-          ? false
-          : true;
-    }).toList();
-    Widget activePage = CategoryScreen(onToggleFavorite: _toggleFavorite, availableMeals: available);
+
+    Widget activePage = CategoryScreen(onToggleFavorite: _toggleFavorite );
     String activePageTitle = 'Catégories';
     if (_selectedPageIndex == 1) {
       activePage = MealScreen(meals: _favoriteMeals, onToggleFavorite: _toggleFavorite);
