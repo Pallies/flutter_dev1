@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../models/meal.dart';
-import '../providers/favorites.provider.dart';
+import 'package:first_app/_training_part/part6/models/meal.dart';
+import 'package:first_app/_training_part/part6/providers/favorites_provider.dart';
 
 class MealDetailsScreen extends ConsumerWidget {
   const MealDetailsScreen({
@@ -14,26 +14,52 @@ class MealDetailsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isFavorite = ref.watch(isMealFavoriteProvider(meal));
+    final favoriteMeals = ref.watch(favoriteMealsProvider);
+
+    final isFavorite = favoriteMeals.contains(meal);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(meal.title),
         actions: [
           IconButton(
-            onPressed: () =>
-                ref.read(favoritesMealsProvider.notifier).toggleFavorite(meal, context),
-            icon: Icon(isFavorite ? Icons.star : Icons.star_border),
+            onPressed: () {
+              final wasAdded = ref
+                  .read(favoriteMealsProvider.notifier)
+                  .toggleMealFavoriteStatus(meal);
+              ScaffoldMessenger.of(context).clearSnackBars();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(wasAdded ? 'Meal added as a favorite.' : 'Meal removed.'),
+                ),
+              );
+            },
+            icon: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 1000),
+              transitionBuilder: (child, animation) => ScaleTransition(
+                scale: isFavorite ? CurvedAnimation(parent: animation, curve: Curves.elasticOut): animation,
+                child: child,
+              ),
+              child: Icon(
+                isFavorite ? Icons.star : Icons.star_border,
+                color: Colors.amber.shade500,
+                key: ValueKey(isFavorite),
+              ),
+            ),
           ),
         ],
       ),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            Image.network(
-              meal.imageUrl,
-              height: 300,
-              width: double.infinity,
-              fit: BoxFit.cover,
+            Hero(
+              tag: meal.id,
+              child: Image.network(
+                meal.imageUrl,
+                height: 300,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
             ),
             const SizedBox(height: 14),
             Text(
@@ -48,7 +74,7 @@ class MealDetailsScreen extends ConsumerWidget {
               Text(
                 ingredient,
                 style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                  color: Theme.of(context).colorScheme.onBackground,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             const SizedBox(height: 24),
@@ -70,7 +96,7 @@ class MealDetailsScreen extends ConsumerWidget {
                   step,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                    color: Theme.of(context).colorScheme.onBackground,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ),

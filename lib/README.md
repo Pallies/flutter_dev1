@@ -1290,3 +1290,314 @@ Application de gestion de dépenses complète avec :
 - Formatage international
 
 ---
+
+# 🎯 Gestion d'État avec Riverpod
+
+## 📚 Vue d'ensemble
+Riverpod est une solution moderne de gestion d'état pour Flutter, offrant une alternative robuste et type-safe à Provider et autres solutions de state management.
+
+---
+
+## 🔑 Pourquoi Riverpod ?
+
+### Avantages Principaux
+✅ **Compile-time safety** : Détection des erreurs à la compilation  
+✅ **Pas de BuildContext requis** : Accès global aux providers  
+✅ **Testabilité** : Mock et test faciles  
+✅ **Composabilité** : Providers dépendants  
+✅ **Performance** : Rebuilds optimisés automatiquement  
+✅ **Pas de InheritedWidget** : Architecture simplifiée  
+
+---
+
+## 📦 Types de Providers Utilisés dans le Projet
+
+### 1. **Provider** (Données Immuables)
+**Usage :** Données statiques qui ne changent jamais
+
+```dart
+// Provider pour une liste de repas
+final mealsProvider = Provider((ref) => dummyMeals);
+```
+
+**Caractéristiques :**
+- Lecture seule
+- Calculé une seule fois
+- Idéal pour constantes et configurations
+
+---
+
+### 2. **StateNotifierProvider** (État Complexe)
+**Usage :** État avec logique métier
+
+**Exemple : Gestion des Favoris**
+```dart
+class FavoritesMealNotifier extends StateNotifier<List<Meal>> {
+  FavoritesMealNotifier() : super([]);
+
+  void toggleFavorite(Meal meal, context) {
+    if (isFavorite(meal)) {
+      state = state.where((m) => m.id != meal.id).toList();
+    } else {
+      state = [...state, meal];
+    }
+    // Afficher message
+  }
+
+  bool isFavorite(Meal meal) => state.contains(meal);
+}
+
+final favoritesMealsProvider = StateNotifierProvider<FavoritesMealNotifier, List<Meal>>(
+  (ref) => FavoritesMealNotifier(),
+);
+```
+
+**Exemple : Gestion des Filtres**
+```dart
+class FilterNotifier extends StateNotifier<Map<Filter, bool>> {
+  FilterNotifier() : super({
+    Filter.glutenFree: false,
+    Filter.lactoseFree: false,
+    Filter.vegetarian: false,
+    Filter.vegan: false,
+  });
+
+  void setFilter(Filter filter, bool isActive) {
+    state = {...state, filter: isActive};
+  }
+}
+
+final filterMealsProvider = StateNotifierProvider<FilterNotifier, Map<Filter, bool>>(
+  (ref) => FilterNotifier(),
+);
+```
+
+**Caractéristiques :**
+- Logique métier encapsulée
+- État immutable
+- Méthodes personnalisées
+- Facile à tester
+
+---
+
+### 3. **Provider.family** (Providers Paramétrés)
+**Usage :** Provider qui prend un paramètre
+
+```dart
+final isMealFavoriteProvider = Provider.family<bool, Meal>(
+  (ref, meal) {
+    final favoriteMeals = ref.watch(favoritesMealsProvider);
+    return favoriteMeals.contains(meal);
+  },
+);
+
+// Utilisation
+final isFavorite = ref.watch(isMealFavoriteProvider(meal));
+```
+
+**Caractéristiques :**
+- Réutilisable avec différents paramètres
+- Cache par paramètre
+- Optimisation automatique
+
+---
+
+### 4. **Provider Combiné** (Dépendances)
+**Usage :** Provider qui dépend d'autres providers
+
+```dart
+final filteredMealsProvider = Provider<List<Meal>>((ref) {
+  final meals = ref.watch(mealsProvider);
+  final filters = ref.watch(filterMealsProvider);
+  
+  return meals.where((meal) {
+    if (filters[Filter.glutenFree]! && !meal.isGlutenFree) return false;
+    if (filters[Filter.lactoseFree]! && !meal.isLactoseFree) return false;
+    if (filters[Filter.vegetarian]! && !meal.isVegetarian) return false;
+    if (filters[Filter.vegan]! && !meal.isVegan) return false;
+    return true;
+  }).toList();
+});
+```
+
+**Caractéristiques :**
+- Combine plusieurs sources
+- Recalcule automatiquement
+- Séparation des responsabilités
+
+---
+
+## 🎨 Utilisation dans les Widgets
+
+### ConsumerWidget
+**Remplace StatelessWidget pour accéder aux providers**
+
+```dart
+class CategoriesScreen extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final filteredMeals = ref.watch(filteredMealsProvider);
+    
+    return GridView.builder(
+      itemCount: filteredMeals.length,
+      itemBuilder: (_, index) => MealItem(meal: filteredMeals[index]),
+    );
+  }
+}
+```
+
+### ConsumerStatefulWidget
+**Remplace StatefulWidget quand on a besoin d'état local + providers**
+
+```dart
+class FiltersScreen extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<FiltersScreen> createState() => _FiltersScreenState();
+}
+
+class _FiltersScreenState extends ConsumerState<FiltersScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return SwitchListTile(
+      value: ref.watch(filterGlutenProvider),
+      onChanged: (value) {
+        ref.read(filterMealsProvider.notifier).setFilter(Filter.glutenFree, value);
+      },
+    );
+  }
+}
+```
+
+---
+
+## 🔄 ref.watch() vs ref.read() vs ref.listen()
+
+| Méthode | Usage | Rebuild | Contexte |
+|---------|-------|---------|----------|
+| `ref.watch()` | Lire et écouter | ✅ Oui | Dans `build()` |
+| `ref.read()` | Lire une fois | ❌ Non | Dans callbacks |
+| `ref.listen()` | Écouter sans rebuild | ❌ Non | Side effects |
+
+**Exemples :**
+```dart
+@override
+Widget build(BuildContext context, WidgetRef ref) {
+  // ✅ watch() - Afficher des données qui changent
+  final meals = ref.watch(mealsProvider);
+  
+  // ✅ listen() - Effets de bord (SnackBar, navigation)
+  ref.listen<List<Meal>>(favoritesMealsProvider, (previous, next) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Favoris mis à jour!')),
+    );
+  });
+  
+  return ElevatedButton(
+    // ✅ read() - Actions (pas besoin de rebuild)
+    onPressed: () {
+      ref.read(favoritesMealsProvider.notifier).toggleFavorite(meal, context);
+    },
+    child: Text('Toggle Favorite'),
+  );
+}
+```
+
+---
+
+## 🏗️ Architecture de l'Application avec Riverpod
+
+### Structure des Providers
+```
+providers/
+├── meal.provider.dart          → Provider (données statiques)
+├── filters.provider.dart       → StateNotifierProvider (filtres)
+└── favorites.provider.dart     → StateNotifierProvider (favoris)
+```
+
+### Flux de Données
+```
+mealsProvider (Liste complète de repas)
+      ↓
+filterMealsProvider (État des filtres)
+      ↓
+filteredMealsProvider (Liste filtrée combinée)
+      ↓
+CategoriesScreen (Affichage avec ConsumerWidget)
+```
+
+### Interaction Utilisateur
+```
+User Toggle Filter
+      ↓
+ref.read(filterMealsProvider.notifier).setFilter(...)
+      ↓
+State Change dans FilterNotifier
+      ↓
+ref.watch(filteredMealsProvider) détecte le changement
+      ↓
+Widget Rebuild automatiquement
+      ↓
+UI mise à jour
+```
+
+---
+
+## 💡 Bonnes Pratiques Riverpod
+
+### ✅ À Faire
+1. Utiliser `ConsumerWidget` au lieu de `StatelessWidget` pour accéder aux providers
+2. Utiliser `ref.watch()` dans `build()` pour écouter les changements
+3. Utiliser `ref.read()` dans les callbacks et event handlers
+4. Séparer la logique métier dans des `StateNotifier`
+5. Utiliser `.family` pour les providers paramétrés
+6. Combiner les providers pour des calculs dérivés
+
+### ❌ À Éviter
+1. ❌ Ne jamais utiliser `ref.read()` dans `build()`
+2. ❌ Ne pas muter `state` directement dans StateNotifier
+3. ❌ Ne pas oublier `.toList()` après `.where()`
+4. ❌ Ne pas créer de providers dans `build()`
+5. ❌ Ne pas oublier `ProviderScope` à la racine
+
+---
+
+## 📚 Pour Aller Plus Loin
+
+### Guide Complet
+📖 **Consultez le guide détaillé :** [`RIVERPOD_GUIDE.md`](./RIVERPOD_GUIDE.md)
+
+Ce guide complet couvre :
+- Tous les types de providers (StateProvider, FutureProvider, StreamProvider, etc.)
+- Fonctionnalités avancées (AutoDispose, KeepAlive, Select, etc.)
+- Patterns et exemples pratiques
+- Testing avec Riverpod
+- Code Generation
+- Ressources et liens officiels
+
+### Liens Utiles
+- **Documentation officielle :** https://riverpod.dev/
+- **GitHub Repository :** https://github.com/rrousselGit/riverpod
+- **Exemples officiels :** https://github.com/rrousselGit/riverpod/tree/master/examples
+- **Pub.dev Package :** https://pub.dev/packages/flutter_riverpod
+
+---
+
+## 🎯 Avantages Riverpod vs setState
+
+| Aspect | setState | Riverpod |
+|--------|----------|----------|
+| Portée | Widget local | Global |
+| Partage d'état | Difficile | Facile |
+| Testabilité | Complexe | Simple |
+| Performance | Rebuilds inutiles | Optimisé |
+| Code | Verbeux | Concis |
+| Type safety | ❌ | ✅ |
+| Cache | ❌ | ✅ |
+
+---
+
+**Document mis à jour avec Riverpod**  
+**Dernière mise à jour : Novembre 2025**
+
+---
+

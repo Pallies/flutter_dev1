@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/category.dart';
+
+import 'package:first_app/_training_part/part6/models/category.dart';
 
 class CategoryGridItem extends StatelessWidget {
   const CategoryGridItem({
@@ -23,8 +24,8 @@ class CategoryGridItem extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             gradient: LinearGradient(
               colors: [
-                category.color.withOpacity(0.55),
-                category.color.withOpacity(0.9),
+                category.color.withAlpha(115),
+                category.color.withAlpha(225),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -32,7 +33,7 @@ class CategoryGridItem extends StatelessWidget {
         child: Text(
           category.title,
           style: Theme.of(context).textTheme.titleLarge!.copyWith(
-                color: Theme.of(context).colorScheme.onBackground,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
         ),
       ),

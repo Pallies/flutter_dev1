@@ -19,7 +19,7 @@ class MainDrawer extends StatelessWidget {
                   Theme.of(context)
                       .colorScheme
                       .primaryContainer
-                      .withOpacity(0.8),
+                      .withAlpha(205),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,

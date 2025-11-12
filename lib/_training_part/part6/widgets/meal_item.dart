@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:transparent_image/transparent_image.dart';
-import '../models/meal.dart';
-import 'meal_item_trait.dart';
+
+import 'package:first_app/_training_part/part6/widgets/meal_item_trait.dart';
+import 'package:first_app/_training_part/part6/models/meal.dart';
 
 class MealItem extends StatelessWidget {
   const MealItem({
@@ -38,12 +39,15 @@ class MealItem extends StatelessWidget {
         },
         child: Stack(
           children: [
-            FadeInImage(
-              placeholder: MemoryImage(kTransparentImage),
-              image: NetworkImage(meal.imageUrl),
-              fit: BoxFit.cover,
-              height: 200,
-              width: double.infinity,
+            Hero(
+              tag: meal.id,// le tag doit être UNIQUE pour chaque Hero sur l'écran,
+              child: FadeInImage(
+                placeholder: MemoryImage(kTransparentImage),
+                image: NetworkImage(meal.imageUrl),
+                fit: BoxFit.cover,
+                height: 200,
+                width: double.infinity,
+              ),
             ),
             Positioned(
               bottom: 0,

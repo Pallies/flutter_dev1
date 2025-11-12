@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../models/meal.dart';
-import '../widgets/meal_item.dart';
-import 'meal_details.dart';
-
+import 'package:first_app/_training_part/part6/models/meal.dart';
+import 'package:first_app/_training_part/part6/screens/meal_details.dart';
+import 'package:first_app/_training_part/part6/widgets/meal_item.dart';
 
 class MealsScreen extends StatelessWidget {
   const MealsScreen({
@@ -34,14 +33,14 @@ class MealsScreen extends StatelessWidget {
           Text(
             'Uh oh ... nothing here!',
             style: Theme.of(context).textTheme.headlineLarge!.copyWith(
-                  color: Theme.of(context).colorScheme.onBackground,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
           ),
           const SizedBox(height: 16),
           Text(
             'Try selecting a different category!',
             style: Theme.of(context).textTheme.bodyLarge!.copyWith(
-                  color: Theme.of(context).colorScheme.onBackground,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
           ),
         ],
