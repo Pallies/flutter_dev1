@@ -1,5 +1,5 @@
 import 'package:first_app/_training_part/part7/widgets/grocery_list.widget.dart';
-import 'package:first_app/_training_part/part8/sqflite/DatabaseHelper.dart';
+import 'package:first_app/_training_part/part8/database/DatabaseHelper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final db = await DatabaseHelper.instance.database; // OK
+  final db = await DatabaseHelper.instance.database; // OK permet l'initialisation de la BD
   runApp(ProviderScope(child: const App()));
 }
 

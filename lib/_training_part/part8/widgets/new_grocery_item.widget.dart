@@ -1,12 +1,13 @@
 import 'dart:convert';
 
-import 'package:first_app/_training_part/part8/models/grocery_item.model.dart';
 import 'package:first_app/_training_part/part8/providers/category.provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/category.model.dart';
 import 'package:http/http.dart' as http;
+
+import '../models/grocery_item.model.dart';
 
 class NewGroceryItem extends ConsumerStatefulWidget {
   const NewGroceryItem({super.key});
@@ -18,6 +19,7 @@ class NewGroceryItem extends ConsumerStatefulWidget {
 class _NewGroceryItemState extends ConsumerState<NewGroceryItem> {
   //pour l'utilisation des validateurs mais peut être dans le provider
   final _formKey = GlobalKey<FormState>();
+  bool _isSubmitting = false;
   var _enteredName = '';
   var _enteredQuantity = 1;
   late Category _selectedCategory = categoriesList[Categories.vegetables]!;
@@ -25,6 +27,9 @@ class _NewGroceryItemState extends ConsumerState<NewGroceryItem> {
 
   void _savedGroceryItem() async {
     if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isSubmitting = true;
+      });
       final url = Uri.https('your-backend-endpoint.com', '/grocery-items.json');
       final response = await http.post(
         // Uri.parse('https://your-backend-endpoint.com/grocery-items.json'),
@@ -37,20 +42,30 @@ class _NewGroceryItemState extends ConsumerState<NewGroceryItem> {
         }),
       );
       _formKey.currentState!.save();
-      // Navigator.of(context).pop(
-      //   GroceryItem(
-      //     id: DateTime.now().toString(),
-      //     name: _enteredName,
-      //     quantity: _enteredQuantity,
-      //     category: _selectedCategory,
-      //   ),
-      // );
-      response.statusCode;
+
       // context.mounted propriété qui indique si le widget associé au BuildContext est toujours "monté" dans l'arbre des widgets.
       if (!context.mounted) {
         return;
       }
-      Navigator.of(context).pop();
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final Map<String, dynamic> result = jsonDecode(response.body);
+        Navigator.of(context).pop(
+          GroceryItem(
+            id: result['name'],
+            name: _enteredName,
+            quantity: _enteredQuantity,
+            category: _selectedCategory,
+          ),
+        );
+      }else if(response.statusCode>=400){
+        setState(() {
+          _isSubmitting = false;
+        });
+        // Gérer les erreurs de soumission
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to add item. Please try again.')),
+        );
+      }
     }
   }
 
@@ -132,10 +147,16 @@ class _NewGroceryItemState extends ConsumerState<NewGroceryItem> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TextButton(onPressed: () => _formKey.currentState!.reset(), child: Text('Reset')),
+                  TextButton(
+                    onPressed: () => _isSubmitting ? null : _formKey.currentState!.reset(),
+                    child: Text('Reset'),
+                  ), //disable le bouton si en train de soumettre
                   ElevatedButton(
-                    onPressed: _savedGroceryItem,
-                    child: Text('Validez'),
+                    onPressed: _isSubmitting ? null : _savedGroceryItem,
+                    //disable le bouton si en train de soumettre
+                    child: _isSubmitting
+                        ? SizedBox(height: 16, width: 16, child: CircularProgressIndicator())
+                        : Text('Validez'),
                   ),
                 ],
               ),
