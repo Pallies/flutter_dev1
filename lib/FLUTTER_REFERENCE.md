@@ -1,3 +1,345 @@
+class UserRepository {
+  // Mettre à jour un utilisateur
+  Future<int> update(User user) async {
+    final db = await DatabaseHelper.instance.database;
+    
+    return await db.update(
+      'users',
+      user.toJson(),
+      where: 'id = ?',
+      whereArgs: [user.id],
+    );
+  }
+}
+```
+
+### DELETE
+```dart
+class UserRepository {
+  // Supprimer un utilisateur
+  Future<int> delete(int id) async {
+    final db = await DatabaseHelper.instance.database;
+    
+    return await db.delete(
+      'users',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+  
+  // Supprimer tous
+  Future<int> deleteAll() async {
+    final db = await DatabaseHelper.instance.database;
+    return await db.delete('users');
+  }
+}
+```
+
+---
+
+## Model avec SQLite
+**Description :** Modèle compatible avec SQLite  
+
+```dart
+class User {
+  final int? id;
+  final String name;
+  final String email;
+  final int age;
+
+  User({
+    this.id,
+    required this.name,
+    required this.email,
+    required this.age,
+  });
+
+  // Depuis JSON/Map (lecture DB)
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
+      id: json['id'],
+      name: json['name'],
+      email: json['email'],
+      age: json['age'],
+    );
+  }
+
+  // Vers JSON/Map (écriture DB)
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'email': email,
+      'age': age,
+    };
+  }
+
+  // CopyWith pour modifications
+  User copyWith({
+    int? id,
+    String? name,
+    String? email,
+    int? age,
+  }) {
+    return User(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      age: age ?? this.age,
+    );
+  }
+}
+```
+
+---
+
+## Initialisation dans main()
+**Description :** Initialiser la BD avant le démarrage  
+
+```dart
+void main() async {
+  // Important pour les opérations async avant runApp
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialiser la base de données
+  final db = await DatabaseHelper.instance.database;
+  
+  runApp(const ProviderScope(child: MyApp()));
+}
+```
+
+---
+
+## Transactions
+**Description :** Opérations atomiques groupées  
+
+```dart
+Future<void> transferData(User from, User to, int amount) async {
+  final db = await DatabaseHelper.instance.database;
+  
+  await db.transaction((txn) async {
+    // Débit
+    await txn.update(
+      'users',
+      {'balance': from.balance - amount},
+      where: 'id = ?',
+      whereArgs: [from.id],
+    );
+    
+    // Crédit
+    await txn.update(
+      'users',
+      {'balance': to.balance + amount},
+      where: 'id = ?',
+      whereArgs: [to.id],
+    );
+  });
+}
+```
+
+---
+
+## Migration de Base de Données
+**Description :** Mettre à jour le schéma de la BD  
+
+```dart
+Future<Database> _initDB(String filePath) async {
+  final dbPath = await getDatabasesPath();
+  final path = join(dbPath, filePath);
+
+  return await openDatabase(
+    path,
+    version: 2, // Incrémenter la version
+    onCreate: _createDB,
+    onUpgrade: _onUpgrade,
+  );
+}
+
+Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+  if (oldVersion < 2) {
+    // Ajouter une nouvelle colonne
+    await db.execute('ALTER TABLE users ADD COLUMN phone TEXT');
+  }
+}
+```
+
+---
+
+# 📚 Résumé des Parts
+
+## Part 1 - Bases de Flutter
+**Concepts abordés :**
+- StatelessWidget et StatefulWidget
+- setState()
+- Widgets de base : Text, Image, Container, Column, Row
+- Buttons : OutlinedButton
+- Layouts simples
+- Gestion d'événements
+
+**Application :** Jeu de lancer de dés
+
+---
+
+## Part 2 - Quiz Application
+**Concepts abordés :**
+- Navigation multi-écrans
+- Gestion d'état complexe
+- Callbacks parent-enfant
+- Modèles de données
+- Google Fonts
+- Opérateur spread (...)
+- Analyse de résultats
+
+**Application :** Application de quiz avec résultats
+
+---
+
+## Part 3 - Expense Tracker
+**Concepts abordés :**
+- CRUD complet (Create, Read, Update, Delete)
+- Formulaires avec TextField et DropdownButton
+- showModalBottomSheet
+- Dismissible (swipe actions)
+- DatePicker
+- Validation de formulaire
+- Chart personnalisé
+- Theme.of(context)
+- MediaQuery et responsive design
+- LayoutBuilder
+- Gestion du clavier
+
+**Application :** Gestionnaire de dépenses avec graphiques
+
+---
+
+## Part 4 - Meals Application
+**Concepts abordés :**
+- Navigation avancée
+- Drawer et BottomNavigationBar
+- Tabs avec TabBar
+- Filtres complexes
+- Image.network et FadeInImage
+- Stack et Positioned
+- InkWell avec effet Material
+- GridView
+- SwitchListTile
+- PopScope (gestion du bouton retour)
+- Communication de données entre écrans
+
+**Application :** Application de recettes avec filtres et favoris
+
+---
+
+## Part 5 - Animations
+**Concepts abordés :**
+- Animations implicites
+- Animations explicites
+- AnimationController
+- Tween et Curves
+- Hero animations
+- Animated widgets
+- Page transitions
+
+**Application :** Diverses animations et transitions
+
+---
+
+## Part 6 - Riverpod (Meals App)
+**Concepts abordés :**
+- Introduction à Riverpod
+- Provider (données immuables)
+- StateNotifierProvider (état complexe)
+- Provider.family (providers paramétrés)
+- ConsumerWidget et ConsumerStatefulWidget
+- ref.watch(), ref.read(), ref.listen()
+- Gestion d'état globale
+- Séparation des responsabilités
+
+**Application :** Application de recettes avec Riverpod  
+**Fichiers clés :**
+- `providers/meals_provider.dart` : Provider simple
+- `providers/favorites_provider.dart` : StateNotifier pour favoris
+- `providers/filters_provider.dart` : Filtres avec état
+
+---
+
+## Part 7 - HTTP et Formulaires (Shopping List)
+**Concepts abordés :**
+- Package http
+- GET, POST, DELETE requests
+- JSON parsing (fromJson, toJson)
+- Async/Await avancé
+- Gestion d'erreurs HTTP
+- États de chargement (loading, error, data)
+- CRUD avec API REST
+- Formulaires avec validation
+- Riverpod pour gestion d'état
+
+**Application :** Liste de courses avec backend Firebase  
+**Fichiers clés :**
+- `providers/grocery.provider.dart` : StateNotifier pour items
+- `widgets/grocery_list.widget.dart` : Liste avec HTTP
+- `widgets/new_grocery_item.widget.dart` : Formulaire POST
+
+**API utilisée :** Firebase Realtime Database
+
+---
+
+## Part 8 - Base de Données SQLite (Shopping List + DB)
+**Concepts abordés :**
+- Package sqflite
+- DatabaseHelper pattern (Singleton)
+- CRUD avec SQLite
+- Transactions
+- Relations entre tables
+- Migration de schéma
+- Repository pattern
+- WidgetsFlutterBinding.ensureInitialized()
+- Persistance locale des données
+
+**Application :** Liste de courses avec stockage local SQLite  
+**Fichiers clés :**
+- `database/DatabaseHelper.dart` : Gestion de la BD
+- `database/User.dart` : Model exemple
+- `database/UserRepository.dart` : CRUD operations
+- `providers/grocery.provider.dart` : Intégration avec Riverpod
+
+**Différence avec Part 7 :** Stockage local au lieu d'API HTTP
+
+---
+
+## Comparaison Parts 6, 7 et 8
+
+| Aspect | Part 6 | Part 7 | Part 8 |
+|--------|--------|--------|--------|
+| **Theme** | Meals App | Shopping List | Shopping List |
+| **État** | Riverpod | Riverpod | Riverpod |
+| **Données** | Local (statique) | HTTP/Firebase | SQLite Local |
+| **Opérations** | Read, Filter, Favorite | CRUD HTTP | CRUD SQLite |
+| **Async** | Aucun | Futures HTTP | Futures DB |
+| **Packages** | riverpod | riverpod, http | riverpod, sqflite, path |
+| **Complexité** | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
+
+---
+
+## Progression Recommandée des Parts
+
+### Débutant (Parts 1-3)
+1. **Part 1** : Comprendre les bases de Flutter
+2. **Part 2** : Navigation et état simple
+3. **Part 3** : CRUD et formulaires
+
+### Intermédiaire (Parts 4-5)
+4. **Part 4** : Navigation avancée et images
+5. **Part 5** : Animations
+
+### Avancé (Parts 6-8)
+6. **Part 6** : Gestion d'état avec Riverpod
+7. **Part 7** : Networking et API REST
+8. **Part 8** : Base de données locale
+
+---
+
 # 📚 Guide de Référence Flutter - Par Widgets et Concepts
 
 > Guide organisé par widgets et concepts pour faciliter la recherche d'informations spécifiques.
@@ -17,7 +359,10 @@
 9. [Concepts Fondamentaux](#concepts-fondamentaux)
 10. [Gestion d'État](#gestion-détat)
 11. [Techniques Avancées](#techniques-avancées)
-12. [Packages Externes](#packages-externes)
+12. [Networking et HTTP](#networking-et-http)
+13. [Base de Données Locale](#base-de-données-locale)
+14. [Packages Externes](#packages-externes)
+15. [Résumé des Parts](#résumé-des-parts)
 
 ---
 
@@ -2407,6 +2752,453 @@ void submitForm() {
 
 ---
 
+# 🌐 Networking et HTTP
+
+## Package http
+**Installation :**
+```bash
+flutter pub add http
+```
+
+**Import :**
+```dart
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+```
+
+## GET Request
+**Description :** Récupérer des données depuis une API  
+
+**Exemple basique :**
+```dart
+Future<List<Item>> fetchItems() async {
+  final url = Uri.https('example.com', '/api/items');
+  
+  try {
+    final response = await http.get(url);
+    
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      return data.map((item) => Item.fromJson(item)).toList();
+    } else {
+      throw Exception('Failed to load items');
+    }
+  } catch (error) {
+    print('Error: $error');
+    rethrow;
+  }
+}
+```
+
+**Avec headers :**
+```dart
+final response = await http.get(
+  url,
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer $token',
+  },
+);
+```
+
+---
+
+## POST Request
+**Description :** Envoyer des données à une API  
+
+**Exemple :**
+```dart
+Future<Item> createItem(Item item) async {
+  final url = Uri.https('example.com', '/api/items');
+  
+  try {
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: json.encode({
+        'name': item.name,
+        'quantity': item.quantity,
+        'category': item.category.id,
+      }),
+    );
+    
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final data = json.decode(response.body);
+      return Item.fromJson(data);
+    } else {
+      throw Exception('Failed to create item');
+    }
+  } catch (error) {
+    print('Error: $error');
+    rethrow;
+  }
+}
+```
+
+---
+
+## DELETE Request
+**Description :** Supprimer des données via une API  
+
+**Exemple :**
+```dart
+Future<void> deleteItem(String id) async {
+  final url = Uri.https('example.com', '/api/items/$id');
+  
+  try {
+    final response = await http.delete(url);
+    
+    if (response.statusCode != 200) {
+      throw Exception('Failed to delete item');
+    }
+  } catch (error) {
+    print('Error: $error');
+    rethrow;
+  }
+}
+```
+
+---
+
+## PUT/PATCH Request
+**Description :** Mettre à jour des données existantes  
+
+**Exemple :**
+```dart
+Future<Item> updateItem(String id, Item item) async {
+  final url = Uri.https('example.com', '/api/items/$id');
+  
+  try {
+    final response = await http.put(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(item.toJson()),
+    );
+    
+    if (response.statusCode == 200) {
+      return Item.fromJson(json.decode(response.body));
+    } else {
+      throw Exception('Failed to update item');
+    }
+  } catch (error) {
+    print('Error: $error');
+    rethrow;
+  }
+}
+```
+
+---
+
+## JSON Parsing
+**Description :** Conversion JSON ↔ Objets Dart  
+
+**Model avec fromJson et toJson :**
+```dart
+class GroceryItem {
+  final String id;
+  final String name;
+  final int quantity;
+  final Category category;
+
+  GroceryItem({
+    required this.id,
+    required this.name,
+    required this.quantity,
+    required this.category,
+  });
+
+  // Créer un objet depuis JSON
+  factory GroceryItem.fromJson(Map<String, dynamic> json) {
+    return GroceryItem(
+      id: json['id'],
+      name: json['name'],
+      quantity: json['quantity'],
+      category: categories.firstWhere((cat) => cat.id == json['category']),
+    );
+  }
+
+  // Convertir un objet en JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'quantity': quantity,
+      'category': category.id,
+    };
+  }
+}
+```
+
+**Utilisation :**
+```dart
+// JSON → Objet
+final item = GroceryItem.fromJson(jsonData);
+
+// Liste JSON → Liste d'objets
+final items = (jsonList as List).map((e) => GroceryItem.fromJson(e)).toList();
+
+// Objet → JSON
+final jsonData = item.toJson();
+
+// Liste → JSON
+final jsonList = items.map((e) => e.toJson()).toList();
+```
+
+---
+
+## Gestion d'Erreurs HTTP
+**Description :** Gérer les erreurs réseau et serveur  
+
+**Pattern complet :**
+```dart
+Future<List<Item>> fetchItems() async {
+  final url = Uri.https('example.com', '/api/items');
+  
+  try {
+    final response = await http.get(url);
+    
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return (data as List).map((e) => Item.fromJson(e)).toList();
+    } else if (response.statusCode == 404) {
+      throw Exception('Items not found');
+    } else if (response.statusCode >= 500) {
+      throw Exception('Server error');
+    } else {
+      throw Exception('Error: ${response.statusCode}');
+    }
+  } on http.ClientException catch (e) {
+    throw Exception('Network error: $e');
+  } on FormatException catch (e) {
+    throw Exception('Invalid JSON: $e');
+  } catch (e) {
+    throw Exception('Unexpected error: $e');
+  }
+}
+```
+
+**Dans le Widget :**
+```dart
+class ItemsList extends StatefulWidget {
+  @override
+  State<ItemsList> createState() => _ItemsListState();
+}
+
+class _ItemsListState extends State<ItemsList> {
+  List<Item> _items = [];
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadItems();
+  }
+
+  Future<void> _loadItems() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final items = await fetchItems();
+      setState(() {
+        _items = items;
+        _isLoading = false;
+      });
+    } catch (error) {
+      setState(() {
+        _error = error.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Center(child: CircularProgressIndicator());
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Error: $_error'),
+            ElevatedButton(
+              onPressed: _loadItems,
+              child: Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: _items.length,
+      itemBuilder: (ctx, i) => ItemWidget(item: _items[i]),
+    );
+  }
+}
+```
+
+---
+
+# 💾 Base de Données Locale
+
+## Package sqflite
+**Installation :**
+```bash
+flutter pub add sqflite
+flutter pub add path
+```
+
+**Import :**
+```dart
+import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
+```
+
+---
+
+## DatabaseHelper Pattern (Singleton)
+**Description :** Classe pour gérer la base de données  
+
+**Exemple complet :**
+```dart
+class DatabaseHelper {
+  // Singleton pattern
+  static final DatabaseHelper instance = DatabaseHelper._init();
+  static Database? _database;
+
+  DatabaseHelper._init();
+
+  // Obtenir la base de données
+  Future<Database> get database async {
+    if (_database != null) return _database!;
+    _database = await _initDB('my_database.db');
+    return _database!;
+  }
+
+  // Initialiser la base de données
+  Future<Database> _initDB(String filePath) async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, filePath);
+
+    return await openDatabase(
+      path,
+      version: 1,
+      onCreate: _createDB,
+    );
+  }
+
+  // Créer les tables
+  Future _createDB(Database db, int version) async {
+    await db.execute('''
+      CREATE TABLE users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE,
+        age INTEGER
+      )
+    ''');
+    
+    await db.execute('''
+      CREATE TABLE items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        quantity INTEGER NOT NULL,
+        userId INTEGER,
+        FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE
+      )
+    ''');
+  }
+
+  // Fermer la base de données
+  Future close() async {
+    final db = await instance.database;
+    db.close();
+  }
+}
+```
+
+---
+
+## CRUD Operations
+
+### CREATE (Insert)
+```dart
+class UserRepository {
+  // Insérer un utilisateur
+  Future<int> insert(User user) async {
+    final db = await DatabaseHelper.instance.database;
+    
+    return await db.insert(
+      'users',
+      user.toJson(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+  
+  // Insérer plusieurs utilisateurs
+  Future<void> insertBatch(List<User> users) async {
+    final db = await DatabaseHelper.instance.database;
+    final batch = db.batch();
+    
+    for (var user in users) {
+      batch.insert('users', user.toJson());
+    }
+    
+    await batch.commit();
+  }
+}
+```
+
+### READ (Select)
+```dart
+class UserRepository {
+  // Récupérer tous les utilisateurs
+  Future<List<User>> getAll() async {
+    final db = await DatabaseHelper.instance.database;
+    final result = await db.query('users');
+    
+    return result.map((json) => User.fromJson(json)).toList();
+  }
+  
+  // Récupérer un utilisateur par ID
+  Future<User?> getById(int id) async {
+    final db = await DatabaseHelper.instance.database;
+    final result = await db.query(
+      'users',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    
+    if (result.isEmpty) return null;
+    return User.fromJson(result.first);
+  }
+  
+  // Recherche avec condition
+  Future<List<User>> search(String name) async {
+    final db = await DatabaseHelper.instance.database;
+    final result = await db.query(
+      'users',
+      where: 'name LIKE ?',
+      whereArgs: ['%$name%'],
+      orderBy: 'name ASC',
+    );
+    
+    return result.map((json) => User.fromJson(json)).toList();
+  }
+}
+```
+
+### UPDATE
+```dart
 # 🔍 Index Alphabétique
 
 A
@@ -2423,9 +3215,12 @@ C
 - const
 - Container
 - ColorScheme
+- CRUD Operations
 
 D
+- DatabaseHelper
 - DecoratedBox
+- DELETE Request
 - Design Responsive
 - Dismissible
 - DropdownButton
@@ -2437,18 +3232,30 @@ E
 - Expanded
 
 F
+- FadeInImage
 - FractionallySizedBox
+- fromJson / toJson
 
 G
+- GET Request
 - Getters
 - google_fonts
+- GridView
+
+H
+- http package
 
 I
 - Icon
 - IconButton
 - Image.asset
+- Image.network
+- InkWell
 - initState() / dispose()
 - intl
+
+J
+- JSON Parsing
 
 L
 - LayoutBuilder
@@ -2467,8 +3274,14 @@ O
 
 P
 - Padding
+- PopScope
+- Positioned
+- POST Request
+- Provider (Riverpod)
 
 R
+- Repository Pattern
+- Riverpod
 - Row
 
 S
@@ -2481,8 +3294,12 @@ S
 - SizedBox
 - SnackBar
 - Spacer
+- sqflite
+- Stack
+- StateNotifier
 - StatefulWidget
 - StatelessWidget
+- SwitchListTile
 
 T
 - Text
@@ -2490,6 +3307,7 @@ T
 - TextField
 - TextEditingController
 - Theme.of(context)
+- Transactions (SQL)
 
 U
 - uuid
@@ -2497,8 +3315,12 @@ U
 V
 - Validation
 
+W
+- WidgetsFlutterBinding
+
 ---
 
 **Document créé pour le projet First App Flutter**  
-**Dernière mise à jour : 2025**
+**Dernière mise à jour : 2025-01-17**
+**Couvre les Parts 1-8 avec Riverpod, HTTP et SQLite**
 

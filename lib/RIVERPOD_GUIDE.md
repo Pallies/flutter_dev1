@@ -1,3 +1,373 @@
+
+    // État de chargement
+    if (_isLoading) {
+      return Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // État d'erreur
+    if (_error != null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('Error: $_error'),
+              ElevatedButton(
+                onPressed: _loadItems,
+                child: Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // État normal
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Your Groceries'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.add),
+            onPressed: () => _addItem(context),
+          ),
+        ],
+      ),
+      body: items.isEmpty
+          ? Center(child: Text('No items yet!'))
+          : ListView.builder(
+              itemCount: items.length,
+              itemBuilder: (ctx, i) => Dismissible(
+                key: ValueKey(items[i].id),
+                onDismissed: (_) {
+                  ref.read(groceryNotifier.notifier)
+                     .removeItem(items[i].id);
+                },
+                child: ListTile(
+                  title: Text(items[i].name),
+                  trailing: Text('${items[i].quantity}'),
+                ),
+              ),
+            ),
+    );
+  }
+}
+```
+
+---
+
+### Part 8 : Shopping List avec SQLite
+
+**Architecture :**
+```
+lib/_training_part/part8/
+├── database/
+│   ├── DatabaseHelper.dart
+│   ├── User.dart
+│   └── UserRepository.dart
+├── data/
+│   ├── categories.dart
+│   └── dummy_items.dart
+├── models/
+│   ├── category.model.dart
+│   └── grocery_item.model.dart
+├── providers/
+│   ├── category.provider.dart
+│   └── grocery.provider.dart
+└── widgets/
+    ├── grocery_list.widget.dart
+    ├── grocery_future_list.widget.dart
+    └── new_grocery_item.widget.dart
+```
+
+#### 1. DatabaseHelper (Singleton)
+```dart
+// database/DatabaseHelper.dart
+import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
+
+class DatabaseHelper {
+  static final DatabaseHelper instance = DatabaseHelper._init();
+  static Database? _database;
+
+  DatabaseHelper._init();
+
+  Future<Database> get database async {
+    if (_database != null) return _database!;
+    _database = await _initDB('my_database.db');
+    return _database!;
+  }
+
+  Future<Database> _initDB(String filePath) async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, filePath);
+
+    return await openDatabase(
+      path,
+      version: 1,
+      onCreate: _createDB,
+    );
+  }
+
+  Future _createDB(Database db, int version) async {
+    await db.execute('''
+      CREATE TABLE users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE
+      )
+    ''');
+    
+    await db.execute('''
+      CREATE TABLE grocery_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        quantity INTEGER NOT NULL,
+        category TEXT NOT NULL
+      )
+    ''');
+  }
+
+  Future close() async {
+    final db = await instance.database;
+    db.close();
+  }
+}
+```
+
+---
+
+#### 2. Repository Pattern
+```dart
+// database/UserRepository.dart
+class UserRepository {
+  // CREATE
+  Future<int> insert(User user) async {
+    final db = await DatabaseHelper.instance.database;
+    return await db.insert('users', user.toJson());
+  }
+
+  // READ
+  Future<List<User>> getAll() async {
+    final db = await DatabaseHelper.instance.database;
+    final result = await db.query('users');
+    return result.map((json) => User.fromJson(json)).toList();
+  }
+
+  Future<User?> getById(int id) async {
+    final db = await DatabaseHelper.instance.database;
+    final result = await db.query(
+      'users',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    
+    if (result.isEmpty) return null;
+    return User.fromJson(result.first);
+  }
+
+  // UPDATE
+  Future<int> update(User user) async {
+    final db = await DatabaseHelper.instance.database;
+    return await db.update(
+      'users',
+      user.toJson(),
+      where: 'id = ?',
+      whereArgs: [user.id],
+    );
+  }
+
+  // DELETE
+  Future<int> delete(int id) async {
+    final db = await DatabaseHelper.instance.database;
+    return await db.delete(
+      'users',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+}
+```
+
+---
+
+#### 3. Initialisation dans main()
+```dart
+// main.dart
+void main() async {
+  // Important pour les opérations async avant runApp
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialiser la base de données
+  final db = await DatabaseHelper.instance.database;
+  
+  runApp(const ProviderScope(child: App()));
+}
+```
+
+---
+
+#### 4. StateNotifier avec SQLite
+```dart
+// providers/grocery.provider.dart
+class GroceryNotifier extends StateNotifier<List<GroceryItem>> {
+  GroceryNotifier() : super([]) {
+    loadItems(); // Charger au démarrage
+  }
+
+  Future<void> loadItems() async {
+    final db = await DatabaseHelper.instance.database;
+    final result = await db.query('grocery_items');
+    
+    state = result.map((json) => GroceryItem.fromJson(json)).toList();
+  }
+
+  Future<void> addItem(GroceryItem item) async {
+    final db = await DatabaseHelper.instance.database;
+    final id = await db.insert('grocery_items', item.toJson());
+    
+    final newItem = item.copyWith(id: id);
+    state = [...state, newItem];
+  }
+
+  Future<void> removeItem(int itemId) async {
+    final db = await DatabaseHelper.instance.database;
+    await db.delete(
+      'grocery_items',
+      where: 'id = ?',
+      whereArgs: [itemId],
+    );
+    
+    state = state.where((item) => item.id != itemId).toList();
+  }
+
+  Future<void> updateItem(GroceryItem item) async {
+    final db = await DatabaseHelper.instance.database;
+    await db.update(
+      'grocery_items',
+      item.toJson(),
+      where: 'id = ?',
+      whereArgs: [item.id],
+    );
+    
+    state = [
+      for (final i in state)
+        if (i.id == item.id) item else i,
+    ];
+  }
+}
+```
+
+---
+
+## 🔄 Comparaison des Approches
+
+### Gestion d'État : Part 6 vs Part 7 vs Part 8
+
+| Aspect | Part 6 (Riverpod Local) | Part 7 (Riverpod + HTTP) | Part 8 (Riverpod + SQLite) |
+|--------|-------------------------|--------------------------|----------------------------|
+| **Source de données** | Liste statique en mémoire | API REST (Firebase) | Base de données locale |
+| **Persistance** | ❌ Non (perte au redémarrage) | ✅ Serveur distant | ✅ Locale sur l'appareil |
+| **Async** | Synchrone | Asynchrone (Futures) | Asynchrone (Futures) |
+| **Connexion réseau** | ❌ Non requise | ✅ Requise | ❌ Non requise |
+| **Offline** | ✅ Fonctionne | ❌ Ne fonctionne pas | ✅ Fonctionne |
+| **Partage entre appareils** | ❌ Non | ✅ Oui | ❌ Non |
+| **Complexité** | ⭐⭐ Simple | ⭐⭐⭐⭐ Avancée | ⭐⭐⭐⭐⭐ Très avancée |
+
+---
+
+## 🎯 Bonnes Pratiques Riverpod
+
+### 1. Organisation des Providers
+```
+lib/
+├── providers/
+│   ├── auth_provider.dart          # Authentification
+│   ├── user_provider.dart          # Données utilisateur
+│   ├── items_provider.dart         # Liste d'items
+│   └── filters_provider.dart       # Filtres et recherche
+```
+
+### 2. Nommage des Providers
+```dart
+// ✅ Bon : Nom descriptif avec suffixe Provider
+final userProfileProvider = ...
+final groceryItemsProvider = ...
+final isLoadingProvider = ...
+
+// ❌ Mauvais : Noms génériques
+final data = ...
+final list = ...
+final user = ...
+```
+
+### 3. Séparer Logique et UI
+```dart
+// ✅ Bon : Logique dans le provider
+class TodoNotifier extends StateNotifier<List<Todo>> {
+  void addTodo(String title) {
+    final newTodo = Todo(id: uuid.v4(), title: title);
+    state = [...state, newTodo];
+  }
+}
+
+// ❌ Mauvais : Logique dans le widget
+Widget build(BuildContext context, WidgetRef ref) {
+  return ElevatedButton(
+    onPressed: () {
+      final todos = ref.read(todosProvider);
+      ref.read(todosProvider.notifier).state = [
+        ...todos,
+        Todo(id: uuid.v4(), title: 'New')
+      ];
+    },
+  );
+}
+```
+
+### 4. Utiliser ref.watch() dans build(), ref.read() dans les handlers
+```dart
+// ✅ Bon
+@override
+Widget build(BuildContext context, WidgetRef ref) {
+  final count = ref.watch(counterProvider); // Rebuild quand change
+  
+  return ElevatedButton(
+    onPressed: () {
+      ref.read(counterProvider.notifier).state++; // Pas de rebuild
+    },
+    child: Text('$count'),
+  );
+}
+```
+
+### 5. Gérer les Erreurs
+```dart
+class DataNotifier extends StateNotifier<AsyncValue<List<Item>>> {
+  DataNotifier() : super(const AsyncValue.loading()) {
+    loadData();
+  }
+
+  Future<void> loadData() async {
+    state = const AsyncValue.loading();
+    
+    try {
+      final data = await fetchData();
+      state = AsyncValue.data(data);
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
+    }
+  }
+}
+```
+
+---
+
+**Document créé pour le projet First App Flutter**  
+**Dernière mise à jour : 2025-01-17**  
+**Couvre Riverpod avec exemples concrets des Parts 6, 7 et 8**
 # 🎯 Guide Complet Riverpod - Gestion d'État en Flutter
 
 > Documentation complète sur Riverpod avec exemples pratiques et fonctionnalités avancées
@@ -13,6 +383,12 @@
 5. [Patterns et Exemples Pratiques](#patterns-et-exemples-pratiques)
 6. [Fonctionnalités Avancées](#fonctionnalités-avancées)
 7. [Ressources et Liens Utiles](#ressources-et-liens-utiles)
+8. [Exemples Pratiques des Parts du Projet](#exemples-pratiques-des-parts-du-projet)
+   - [Part 6 : Meals Application avec Riverpod](#part-6--meals-application-avec-riverpod)
+   - [Part 7 : Shopping List avec HTTP](#part-7--shopping-list-avec-http)
+   - [Part 8 : Shopping List avec SQLite](#part-8--shopping-list-avec-sqlite)
+9. [Comparaison des Approches](#comparaison-des-approches)
+10. [Bonnes Pratiques Riverpod](#bonnes-pratiques-riverpod)
 
 ---
 
@@ -999,6 +1375,434 @@ flutter pub run build_runner watch
 ### Vidéos et Cours
 
 - **Riverpod Official YouTube :** https://www.youtube.com/@RemiRousselet
+
+---
+
+## 📱 Exemples Pratiques des Parts du Projet
+
+### Part 6 : Meals Application avec Riverpod
+
+**Architecture :**
+```
+lib/_training_part/part6/
+├── data/
+│   └── dummy_data.dart          # Données statiques
+├── models/
+│   ├── meal.dart
+│   └── category.dart
+├── providers/
+│   ├── meals_provider.dart      # Provider simple
+│   ├── favorites_provider.dart  # StateNotifier
+│   └── filters_provider.dart    # StateNotifier + computed
+├── screens/
+│   ├── tabs.dart
+│   ├── categories.dart
+│   ├── meals.dart
+│   ├── meal_details.dart
+│   └── filters.dart
+└── widgets/
+    ├── category_grid_item.dart
+    ├── meal_item.dart
+    └── main_drawer.dart
+```
+
+#### 1. Provider Simple (Données Immuables)
+```dart
+// providers/meals_provider.dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:first_app/_training_part/part6/data/dummy_data.dart';
+
+final mealsProvider = Provider((ref) {
+  return dummyMeals; // Liste statique de repas
+});
+```
+
+**Utilisation :** Données qui ne changent jamais (liste de référence)
+
+---
+
+#### 2. StateNotifier pour Favoris
+```dart
+// providers/favorites_provider.dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
+import '../models/meal.dart';
+
+class FavoritesMealNotifier extends StateNotifier<List<Meal>> {
+  FavoritesMealNotifier() : super([]); // État initial vide
+
+  void toggleFavorite(Meal meal, BuildContext context) {
+    var message = '';
+    ScaffoldMessenger.of(context).clearSnackBars();
+    
+    if (isFavorite(meal)) {
+      // Retirer des favoris
+      state = state.where((m) => m.id != meal.id).toList();
+      message = 'Meal is no longer a favorite.';
+    } else {
+      // Ajouter aux favoris
+      state = [...state, meal];
+      message = 'Marked as a favorite!';
+    }
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  bool isFavorite(Meal meal) {
+    return state.contains(meal);
+  }
+}
+
+final favoritesMealsProvider = 
+    StateNotifierProvider<FavoritesMealNotifier, List<Meal>>(
+  (ref) => FavoritesMealNotifier(),
+);
+```
+
+**Points clés :**
+- ✅ Immutabilité : `state = [...state, meal]` crée une nouvelle liste
+- ✅ Méthodes métier encapsulées
+- ✅ Feedback utilisateur avec SnackBar
+
+---
+
+#### 3. StateNotifier pour Filtres
+```dart
+// providers/filters_provider.dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
+
+enum Filter { glutenFree, lactoseFree, vegetarian, vegan }
+
+class FilterNotifier extends StateNotifier<Map<Filter, bool>> {
+  FilterNotifier() : super({
+    Filter.glutenFree: false,
+    Filter.lactoseFree: false,
+    Filter.vegetarian: false,
+    Filter.vegan: false,
+  });
+
+  void setFilter(Filter filter, bool isActive) {
+    state = {
+      ...state,
+      filter: isActive,
+    };
+  }
+
+  void setFilters(Map<Filter, bool> newFilters) {
+    state = newFilters;
+  }
+}
+
+final filterMealsProvider = 
+    StateNotifierProvider<FilterNotifier, Map<Filter, bool>>(
+  (ref) => FilterNotifier(),
+);
+```
+
+---
+
+#### 4. Provider Computed (Dépendances)
+```dart
+// providers/filters_provider.dart (suite)
+
+// Provider qui combine meals + filtres
+final filteredMealsProvider = Provider<List<Meal>>((ref) {
+  final meals = ref.watch(mealsProvider);
+  final filters = ref.watch(filterMealsProvider);
+  
+  return meals.where((meal) {
+    if (filters[Filter.glutenFree]! && !meal.isGlutenFree) return false;
+    if (filters[Filter.lactoseFree]! && !meal.isLactoseFree) return false;
+    if (filters[Filter.vegetarian]! && !meal.isVegetarian) return false;
+    if (filters[Filter.vegan]! && !meal.isVegan) return false;
+    return true;
+  }).toList();
+});
+```
+
+**Avantages :**
+- ✅ Séparation des responsabilités
+- ✅ Recalcul automatique quand meals ou filters changent
+- ✅ Réutilisable dans plusieurs widgets
+
+---
+
+#### 5. Provider.family (Paramétrés)
+```dart
+// providers/favorites_provider.dart (suite)
+
+// Provider qui vérifie si un repas spécifique est favori
+final isMealFavoriteProvider = Provider.family<bool, Meal>(
+  (ref, meal) {
+    final favoriteMeals = ref.watch(favoritesMealsProvider);
+    return favoriteMeals.contains(meal);
+  },
+);
+```
+
+**Utilisation dans un widget :**
+```dart
+class MealDetailsScreen extends ConsumerWidget {
+  final Meal meal;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isFavorite = ref.watch(isMealFavoriteProvider(meal));
+    
+    return IconButton(
+      icon: Icon(isFavorite ? Icons.star : Icons.star_border),
+      onPressed: () {
+        ref.read(favoritesMealsProvider.notifier)
+           .toggleFavorite(meal, context);
+      },
+    );
+  }
+}
+```
+
+---
+
+#### 6. Factory Function pour Providers
+```dart
+// providers/filters_provider.dart (suite)
+
+// Fonction factory pour créer des providers de filtres individuels
+Provider<bool> filterProvider(Filter filter) =>
+    Provider<bool>((ref) => ref.watch(filterMealsProvider)[filter]!);
+
+// Providers individuels
+final filterGlutenProvider = filterProvider(Filter.glutenFree);
+final filterLactoseProvider = filterProvider(Filter.lactoseFree);
+final filterVegetarianProvider = filterProvider(Filter.vegetarian);
+final filterVeganProvider = filterProvider(Filter.vegan);
+```
+
+**Utilisation dans FiltersScreen :**
+```dart
+class FiltersScreen extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<FiltersScreen> createState() => _FiltersScreenState();
+}
+
+class _FiltersScreenState extends ConsumerState<FiltersScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        SwitchListTile(
+          value: ref.watch(filterGlutenProvider),
+          onChanged: (value) {
+            ref.read(filterMealsProvider.notifier)
+               .setFilter(Filter.glutenFree, value);
+          },
+          title: Text('Gluten-free'),
+        ),
+        // Autres switches...
+      ],
+    );
+  }
+}
+```
+
+---
+
+### Part 7 : Shopping List avec HTTP
+
+**Architecture :**
+```
+lib/_training_part/part7/
+├── data/
+│   ├── categories.dart
+│   └── dummy_items.dart
+├── models/
+│   ├── category.model.dart
+│   └── grocery_item.model.dart
+├── providers/
+│   ├── category.provider.dart
+│   ├── grocery.provider.dart
+│   └── grocery_forms.provider.dart
+└── widgets/
+    ├── grocery_list.widget.dart
+    └── new_grocery_item.widget.dart
+```
+
+#### 1. Model avec JSON Parsing
+```dart
+// models/grocery_item.model.dart
+class GroceryItem {
+  final String id;
+  final String name;
+  final int quantity;
+  final Category category;
+
+  GroceryItem({
+    required this.id,
+    required this.name,
+    required this.quantity,
+    required this.category,
+  });
+
+  factory GroceryItem.fromJson(Map<String, dynamic> json) {
+    return GroceryItem(
+      id: json['id'],
+      name: json['name'],
+      quantity: json['quantity'],
+      category: categories.firstWhere((cat) => cat.id == json['category']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'quantity': quantity,
+      'category': category.id,
+    };
+  }
+}
+```
+
+---
+
+#### 2. StateNotifier avec HTTP
+```dart
+// providers/grocery.provider.dart
+import 'package:flutter_riverpod/legacy.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+class GroceryNotifier extends StateNotifier<List<GroceryItem>> {
+  GroceryNotifier() : super([]);
+
+  // GET - Charger les items
+  Future<void> loadItems() async {
+    final url = Uri.https(
+      'flutter-prep-default-rtdb.firebaseio.com',
+      'shopping-list.json',
+    );
+
+    try {
+      final response = await http.get(url);
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as Map<String, dynamic>?;
+        
+        if (data == null) {
+          state = [];
+          return;
+        }
+
+        final items = data.entries.map((entry) {
+          return GroceryItem.fromJson({
+            'id': entry.key,
+            ...entry.value,
+          });
+        }).toList();
+
+        state = items;
+      }
+    } catch (error) {
+      print('Error loading items: $error');
+    }
+  }
+
+  // POST - Ajouter un item
+  Future<void> addItem(GroceryItem item) async {
+    final url = Uri.https(
+      'flutter-prep-default-rtdb.firebaseio.com',
+      'shopping-list.json',
+    );
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(item.toJson()),
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = json.decode(response.body);
+        final newItem = GroceryItem(
+          id: data['name'], // Firebase génère un ID
+          name: item.name,
+          quantity: item.quantity,
+          category: item.category,
+        );
+        
+        state = [...state, newItem];
+      }
+    } catch (error) {
+      print('Error adding item: $error');
+    }
+  }
+
+  // DELETE - Supprimer un item
+  Future<void> removeItem(String itemId) async {
+    final url = Uri.https(
+      'flutter-prep-default-rtdb.firebaseio.com',
+      'shopping-list/$itemId.json',
+    );
+
+    try {
+      final response = await http.delete(url);
+      
+      if (response.statusCode == 200) {
+        state = state.where((item) => item.id != itemId).toList();
+      }
+    } catch (error) {
+      print('Error removing item: $error');
+    }
+  }
+}
+
+final groceryNotifier = 
+    StateNotifierProvider<GroceryNotifier, List<GroceryItem>>(
+  (ref) => GroceryNotifier(),
+);
+```
+
+---
+
+#### 3. Widget avec États de Chargement
+```dart
+// widgets/grocery_list.widget.dart
+class GroceryList extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<GroceryList> createState() => _GroceryListState();
+}
+
+class _GroceryListState extends ConsumerState<GroceryList> {
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadItems();
+  }
+
+  Future<void> _loadItems() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      await ref.read(groceryNotifier.notifier).loadItems();
+      setState(() => _isLoading = false);
+    } catch (error) {
+      setState(() {
+        _error = error.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final items = ref.watch(groceryNotifier);
 - **Flutter Documentation :** https://docs.flutter.dev/data-and-backend/state-mgmt/options#riverpod
 - **Riverpod Crash Course :** https://www.youtube.com/results?search_query=riverpod+flutter+tutorial
 
@@ -1076,46 +1880,7 @@ Migration depuis Provider
 
 ---
 
-## 🔍 Exemple Complet (Application Meals du Projet)
-
-### Structure des Providers
-
-```
-providers/
-├── meal.provider.dart          → Provider (données statiques)
-├── filters.provider.dart       → StateNotifierProvider (filtres)
-└── favorites.provider.dart     → StateNotifierProvider (favoris)
-```
-
-### Flux de Données
-
-```
-mealsProvider (Liste complète)
-      ↓
-filterMealsProvider (Map de filtres)
-      ↓
-filteredMealsProvider (Liste filtrée)
-      ↓
-CategoriesScreen (Affichage)
-```
-
-### Interaction
-
-```
-User action (Toggle filter)
-      ↓
-ref.read(filterMealsProvider.notifier).setFilter(...)
-      ↓
-State change
-      ↓
-ref.watch(filteredMealsProvider) rebuild
-      ↓
-UI updates
-```
-
----
-
 **Document créé pour First App Flutter - Guide Riverpod**  
 **Gestion d'État Moderne avec Riverpod**  
-**Dernière mise à jour : Novembre 2025**
+**Dernière mise à jour : 2025-01-17**
 
