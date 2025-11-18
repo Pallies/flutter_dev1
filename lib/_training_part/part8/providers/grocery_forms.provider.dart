@@ -64,9 +64,9 @@ class GroceryFormNotifier extends StateNotifier<GloceryForms> {
 
   void clear() {
     state = GloceryForms(name: '', quantity: 1, category: categories[Categories.vegetables]!);
-    print(
-      'Item: ${state.name}, Qty: ${state.quantity}, Cat: ${state.category.title}',
-    );
+    // print(
+    //   'Item: ${state.name}, Qty: ${state.quantity}, Cat: ${state.category.title}',
+    // );
   }
 }
 

@@ -25,7 +25,7 @@ class _GroceryListState extends ConsumerState<GroceryList> {
 
   @override
   Widget build(BuildContext context) {
-    Widget _noContent = Center(
+    Widget noContent = Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -106,7 +106,7 @@ class _GroceryListState extends ConsumerState<GroceryList> {
                 ),
               ),
             )
-          : _noContent,
+          : noContent,
     );
   }
 }

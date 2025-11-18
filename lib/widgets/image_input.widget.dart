@@ -31,13 +31,13 @@ class _ImageInputState extends State<ImageInput> {
 
   @override
   Widget build(BuildContext context) {
-      Widget _content = TextButton.icon(
+      Widget content = TextButton.icon(
       onPressed: _takePictures,
       label: const Text('Take Picture'),
       icon: Icon(Icons.camera),
     );
     if (_selectedImage != null) {
-      _content = GestureDetector(
+      content = GestureDetector(
         onTap: _takePictures ,
         child: Image.file(
           _selectedImage!,
@@ -55,7 +55,7 @@ class _ImageInputState extends State<ImageInput> {
       decoration: BoxDecoration(
         border: Border.all(width: 2, color: Theme.of(context).colorScheme.primary.withAlpha(50)),
       ),
-      child: _content,
+      child: content,
     );
   }
 }

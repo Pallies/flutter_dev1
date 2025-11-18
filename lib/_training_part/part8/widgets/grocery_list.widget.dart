@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:first_app/_training_part/part8/providers/grocery.provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -98,7 +97,7 @@ class _GroceryListState extends ConsumerState<GroceryList> {
 
   @override
   Widget build(BuildContext context) {
-    Widget _noContent = Center(
+    Widget noContent = Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -194,7 +193,7 @@ class _GroceryListState extends ConsumerState<GroceryList> {
               ),
             )
           : _isLoading
-          ? _noContent
+          ? noContent
           : Center(
               child: CircularProgressIndicator(),
             ),

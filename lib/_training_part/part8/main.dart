@@ -1,5 +1,5 @@
 import 'package:first_app/_training_part/part7/widgets/grocery_list.widget.dart';
-import 'package:first_app/_training_part/part8/database/DatabaseHelper.dart';
+import 'package:first_app/_training_part/part8/database/database_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

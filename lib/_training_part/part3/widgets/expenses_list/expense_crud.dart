@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../models/data/expenses-list.dart';
+import '../../models/data/expenses_list.dart';
 import '../../models/expense.dart';
 
 class ExpenseCrud {

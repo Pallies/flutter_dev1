@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:first_app/_training_part/part8/providers/grocery.provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -21,7 +20,6 @@ class _GroceryListState extends ConsumerState<GroceryFutureList> {
   late List<GroceryItem> _groceryItems;
   late Future<List<GroceryItem>> _groceryLoadedItems;
 
-  String? _errorMessage;
 
   @override
   void initState() {

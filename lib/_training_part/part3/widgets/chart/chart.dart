@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/enum/category.enum.dart';
 import '../../models/expense.dart';
-import '../Expense_bucket.dart';
+import '../expense_bucket.dart';
 import 'chart_bar.dart';
 
 class Chart extends StatelessWidget {

@@ -78,9 +78,9 @@ class _NewGroceryItemRiverpodState extends ConsumerState<NewGroceryItemRiverpod>
               children: [
                 TextButton(
                   onPressed: () {
-                    print(
-                      'Item: ${formState.name}, Qty: ${formState.quantity}, Cat: ${formState.category.title}',
-                    );
+                    // print(
+                    //   'Item: ${formState.name}, Qty: ${formState.quantity}, Cat: ${formState.category.title}',
+                    // );
                     formNotifier.clear();
                   },
                   child: Text('Reset'),
@@ -88,9 +88,9 @@ class _NewGroceryItemRiverpodState extends ConsumerState<NewGroceryItemRiverpod>
                 ElevatedButton(
                   onPressed: () {
                     if (formNotifier.isValid()) {
-                      print(
-                        'Item: ${formState.name}, Qty: ${formState.quantity}, Cat: ${formState.category.title}',
-                      );
+                      // print(
+                      //   'Item: ${formState.name}, Qty: ${formState.quantity}, Cat: ${formState.category.title}',
+                      // );
                       Navigator.of(context).pop(formNotifier.formGroceryItem);
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(

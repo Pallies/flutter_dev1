@@ -28,7 +28,6 @@ class FavoritesMealNotifier extends StateNotifier<List<Meal>> {
     return state.contains(meal);
   }
 
-  void _showInfoMessage(String message) {}
 }
 
 // StateNotifierProvider pour gérer les listes dynamiques et dont les données peuvent changer

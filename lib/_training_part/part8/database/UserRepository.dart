@@ -1,6 +1,6 @@
 
-import 'DatabaseHelper.dart';
-import 'User.dart';
+import 'database_helper.dart';
+import 'user.dart';
 
 class UserRepository {
   final dbHelper = DatabaseHelper.instance;
