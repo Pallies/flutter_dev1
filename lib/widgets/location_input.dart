@@ -1,8 +1,17 @@
+import 'dart:convert';
+
+import 'package:first_app/models/place_location.model.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:http/http.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
+import 'package:http/http.dart' as http;
 
 class LocationInput extends StatefulWidget {
-  const LocationInput({super.key});
+  const LocationInput({super.key, required this.onLocationPicked});
+
+  final void Function(PlaceLocation location) onLocationPicked;
 
   @override
   State<StatefulWidget> createState() {
@@ -11,8 +20,9 @@ class LocationInput extends StatefulWidget {
 }
 
 class _LocationInputState extends State<LocationInput> {
-  Location? _location;
   bool _isLocationServiceEnabled = false;
+  bool _pickedLocation = false;
+  PlaceLocation? _placeLocation;
 
   void _getCurrentLocation() async {
     Location location = Location();
@@ -40,10 +50,31 @@ class _LocationInputState extends State<LocationInput> {
       _isLocationServiceEnabled = true;
     });
     locationData = await location.getLocation();
+    // print('Location: ${locationData.latitude}, ${locationData.longitude}');
+    // final url = Uri.parse(
+    //   'https://api-adresse.data.gouv.fr/reverse/?lon=${locationData.longitude}&lat=${locationData.latitude}',
+    // );
+    // http.get(url, headers: {'Content-Type': 'application/json'}) ;
+    final url1 = Uri.parse('https://api-adresse.data.gouv.fr/reverse/?lon=2.2&lat=48.8');
+    Response data = await http.get(url1, headers: {'Content-Type': 'application/json'});
+    final Map<String, dynamic> responseData = jsonDecode(data.body);
     setState(() {
       _isLocationServiceEnabled = false;
     });
-    // print('Location: ${locationData.latitude}, ${locationData.longitude}');
+    if (responseData["features"].isEmpty ||
+        locationData.latitude == null ||
+        locationData.longitude == null) {
+      return;
+    }
+    setState(() {
+      _pickedLocation=true;
+      _placeLocation = PlaceLocation(
+        latitude: locationData.latitude!,
+        longitude: locationData.longitude!,
+        address: responseData["features"][0]['properties']['label'],
+      );
+    });
+    widget.onLocationPicked(_placeLocation!);
   }
 
   @override
@@ -54,7 +85,39 @@ class _LocationInputState extends State<LocationInput> {
         context,
       ).textTheme.bodyLarge!.copyWith(color: Theme.of(context).colorScheme.onSurface),
     );
-    if( _isLocationServiceEnabled) {
+    if (_pickedLocation) {
+      content = SizedBox(
+        width: double.infinity,
+        height: 250,
+        child: FlutterMap(
+          options: MapOptions(
+            initialCenter: LatLng(_placeLocation!.latitude, _placeLocation!.longitude), // Londres
+            initialZoom: 9.2,
+          ),
+          children: [
+            TileLayer(
+              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              userAgentPackageName: 'com.example.first_app',
+            ),
+            MarkerLayer(
+              markers: [
+                Marker(
+                  point: LatLng(_placeLocation!.latitude, _placeLocation!.longitude),
+                  width: 80,
+                  height: 80,
+                  child: Icon(
+                    Icons.location_on,
+                    size: 46,
+                    color: Colors.red.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+    if (_isLocationServiceEnabled) {
       content = const CircularProgressIndicator();
     }
     return Column(
@@ -69,7 +132,7 @@ class _LocationInputState extends State<LocationInput> {
               color: Theme.of(context).colorScheme.primary.withAlpha(50),
             ),
           ),
-          child: content
+          child: content,
         ),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
